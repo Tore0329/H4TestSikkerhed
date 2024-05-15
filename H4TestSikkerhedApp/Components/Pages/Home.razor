@@ -1,0 +1,45 @@
+﻿@page "/"
+@* @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")] *@
+
+@inject AuthenticationStateProvider _authenticationStateProvider;
+@* @inject Codes.RoleHandler _roleHandler; *@
+@inject IServiceProvider _serviceProvider;
+
+<PageTitle>Home</PageTitle>
+
+@if (_isAuthenticated)
+{
+    <h1>Hello there [^_^]</h1>
+    @if (_isAdmin)
+    {
+        <h2>You are admin</h2>
+    }
+    else
+    {
+        <h2>You are NOT admin</h2>
+    }
+}
+else
+{
+    <div>
+        <h1>You must log in to see the content.</h1>
+    </div>
+}
+<br />
+
+@code {
+    public bool _isAuthenticated;
+    public bool _isAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAuthenticated = user.Identity.IsAuthenticated;
+        _isAdmin = user.IsInRole("Admin");
+
+        // if (_isAuthenticated)
+        //     await _roleHandler.CreateUserRolesAsync(user.Identity.Name, "Admin", _serviceProvider);
+    }
+}

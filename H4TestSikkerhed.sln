@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34902.65
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "H4TestSikkerhedApp", "H4TestSikkerhedApp\H4TestSikkerhedApp.csproj", "{B86224FB-C7DF-4336-9C60-8C6721C928AD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "H4TestSikkerhedTests", "H4TestSikkerhedTests\H4TestSikkerhedTests.csproj", "{34FDDE3D-62F0-4985-8413-61791EB0B985}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B86224FB-C7DF-4336-9C60-8C6721C928AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B86224FB-C7DF-4336-9C60-8C6721C928AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B86224FB-C7DF-4336-9C60-8C6721C928AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B86224FB-C7DF-4336-9C60-8C6721C928AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34FDDE3D-62F0-4985-8413-61791EB0B985}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34FDDE3D-62F0-4985-8413-61791EB0B985}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34FDDE3D-62F0-4985-8413-61791EB0B985}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34FDDE3D-62F0-4985-8413-61791EB0B985}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9F9AAD7A-E459-4618-99EB-259E7D10AB2B}
+	EndGlobalSection
+EndGlobal

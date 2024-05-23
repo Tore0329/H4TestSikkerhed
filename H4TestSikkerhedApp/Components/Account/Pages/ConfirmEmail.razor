@@ -8,29 +8,10 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
 
-@using System.ComponentModel.DataAnnotations
-@using System.Globalization
-@using System.Text.Encodings.Web
-
-@inject IdentityUserAccessor UserAccessor
-@inject UrlEncoder UrlEncoder
-
-@* @using QRCoder;
-@using System.Drawing; *@
-@using SkiaSharp;
-@using SkiaSharp.QrCode;
-
-
 <PageTitle>Confirm email</PageTitle>
 
 <h1>Confirm email</h1>
 <StatusMessage Message="@statusMessage" />
-<div>
-    <div>
-        Download Google autthenticator and scan the QR code below:
-    </div>
-    <img src="@_imageSource" style="width:300px;height:300px;" />
-</div>
 
 @code {
     private string? statusMessage;
@@ -62,87 +43,6 @@
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
             var result = await UserManager.ConfirmEmailAsync(user, code);
             statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
-
-            // Activate qr code to register user in google authenticaticator
-            await LoadSharedKeyAndQrCodeUriAsync(user);
         }
     }
-
-    // ----------------------------------------------------------
-    private string? _imageSource;
-
-    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
-
-    private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)
-    {
-        // Load the authenticator key & QR code URI to display on the form
-        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
-        if (string.IsNullOrEmpty(unformattedKey))
-        {
-            await UserManager.ResetAuthenticatorKeyAsync(user);
-            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
-        }
-
-        string sharedKey = FormatKey(unformattedKey!);
-
-        var email = await UserManager.GetEmailAsync(user);
-        string authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
-
-        CreateQRImage(authenticatorUri);
-    }
-
-    private string FormatKey(string unformattedKey)
-    {
-        var result = new StringBuilder();
-        int currentPosition = 0;
-        while (currentPosition + 4 < unformattedKey.Length)
-        {
-            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
-            currentPosition += 4;
-        }
-        if (currentPosition < unformattedKey.Length)
-        {
-            result.Append(unformattedKey.AsSpan(currentPosition));
-        }
-
-        return result.ToString().ToLowerInvariant();
-    }
-
-    private string GenerateQrCodeUri(string email, string unformattedKey)
-    {
-        return string.Format(
-            CultureInfo.InvariantCulture,
-            AuthenticatorUriFormat,
-            UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
-            UrlEncoder.Encode(email),
-            unformattedKey);
-    }
-
-    private void CreateQRImage(string authenticatorUri)
-    {
-        using var generator = new QRCodeGenerator();
-        var qr = generator.CreateQrCode(authenticatorUri, ECCLevel.H);
-
-        var info = new SKImageInfo(300, 300);
-        using var surface = SKSurface.Create(info);
-
-        var canvas = surface.Canvas;
-        canvas.Render(qr, 300, 300, SKColors.White, SKColors.Black);
-
-        var image = surface.Snapshot();
-        var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        Stream stream = data.AsStream();
-
-        // ---------
-        MemoryStream ms = new MemoryStream();
-        byte[] buffer = new byte[4096];
-        int bytesRead;
-        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-            ms.Write(buffer, 0, bytesRead);
-        ms.Seek(0, SeekOrigin.Begin);
-
-        string base64 = Convert.ToBase64String(ms.ToArray());
-        _imageSource = string.Format("data:image/png;base64,{0}", base64);
-    }
-
 }

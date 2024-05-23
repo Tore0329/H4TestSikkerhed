@@ -5,34 +5,17 @@ namespace H4TestSikkerhedApp.Code
 {
 	public class RoleHandler
 	{
-		public async Task<bool> CreateUserRolesAsync(string user, string role, IServiceProvider serviceProvider)
-		{
-			bool isCreated = false;
-			try
-			{
-				var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-				var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        public async Task CreateUserRoles(string user, string role, IServiceProvider _serviceProvider)
+        {
+            var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var userManager = _serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-				var userRoleCheck = await roleManager.RoleExistsAsync(role);
-				if (!userRoleCheck)
-				{
-					var roleObj = new IdentityRole(role);
-					await roleManager.CreateAsync(roleObj);
-				}
+            var userRoleCheck = await roleManager.RoleExistsAsync(role);
+            if (!userRoleCheck)
+                await roleManager.CreateAsync(new IdentityRole(role));
 
-				ApplicationUser identityUser = await userManager.FindByEmailAsync(user);
-                if (identityUser != null)
-                {
-                    await userManager.AddToRoleAsync(identityUser, role);
-
-                    isCreated = true;
-                }
-			}
-			catch (Exception)
-			{
-				isCreated = false;
-			}
-			return isCreated;
-		}
-	}
+            ApplicationUser identityUser = await userManager.FindByEmailAsync(user);
+            await userManager.AddToRoleAsync(identityUser, role);
+        }
+    }
 }

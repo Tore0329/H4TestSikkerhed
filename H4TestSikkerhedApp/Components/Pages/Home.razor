@@ -1,45 +1,160 @@
 ﻿@page "/"
-@* @attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")] *@
+@using H4TestSikkerhedApp.Code
+@using H4TestSikkerhedApp.Data
+@using H4TestSikkerhedApp.Model
+@rendermode InteractiveServer
 
+
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Policy = "AuthenticatedUser")]
 @inject AuthenticationStateProvider _authenticationStateProvider;
-@* @inject Codes.RoleHandler _roleHandler; *@
+@inject ApplicationTodoDbContext _toDoContext;
+
+@inject HashingHandler _hashingHandler;
+@inject SymetriskEncryptionHandler _symetriskEncryptionHandler;
+@inject AsymetriskEncryptionHandler _asymetriskEncryptionHandler;
 @inject IServiceProvider _serviceProvider;
 
 <PageTitle>Home</PageTitle>
 
-@if (_isAuthenticated)
+<h3 style="text-align:center;margin-top:10px;">Bruger: @UserName</h3>
+<hr />
+
+@if (CprFromDB == null)
 {
-    <h1>Hello there [^_^]</h1>
-    @if (_isAdmin)
-    {
-        <h2>You are admin</h2>
-    }
-    else
-    {
-        <h2>You are NOT admin</h2>
-    }
+    <div class="col-md-2" style="margin:0 auto;padding-left:20px;">
+        <div style="font-weight:bold;">Indtast dit cpr-nr:</div>
+        <input type="text" @bind="CprNrUserInput" style="width:150px;" />
+        <br />
+        <button class="btn-primary" @onclick="btnSubmitCpr_clicked" style="width:150px;height:45px;margin-top:4px;">Submit</button>
+        @if (CprMessage != null)
+        {
+            <div>@CprMessage</div>
+        }
+    </div>
 }
 else
 {
-    <div>
-        <h1>You must log in to see the content.</h1>
+    <div class="col-md-2" style="margin:0 auto;padding-left:20px;">
+        <div style="font-weight:bold;margin-top:20px;">Indtast to-do item:</div>
+        <input type="text" @bind="ToDoItem" style="width:150px;" />
+        <br />
+        <button class="btn-primary" @onclick="btnSubmitTodoItem_clicked" style="width:150px;height:45px;margin-top:4px;">Submit</button>
     </div>
 }
-<br />
+<div style="margin-top:18px;">
+    @if (TodoListObj != null && TodoListObj.Count > 0)
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>My to do items</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (TodoListObj != null && TodoListObj.Count > 0)
+                {
+                    @foreach (var item in TodoListObj)
+                    {
+                        <tr>
+                            <td>@_asymetriskEncryptionHandler.DecryptAsymetrisk(@item.Item)</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+        <div>
+            @if (_isAdmin)
+            {
+                <button class="btn-primary" @onclick="ClearItems" style="width:150px;height:45px;margin-top:4px;">Clear todo list</button>
+            }
+        </div>
+    }
+</div>
 
 @code {
-    public bool _isAuthenticated;
-    public bool _isAdmin;
+    private bool _isAdmin;
+    private string? UserName { get; set; }
+
+    private string? CprNrUserInput { get; set; }
+    private string? CprFromDB { get; set; }
+    private string? CprMessage { get; set; }
+
+    private string? ToDoItem { get; set; }
+    private List<TodoList>? TodoListObj { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        TodoListObj = new List<TodoList>();
 
         var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-        _isAuthenticated = user.Identity.IsAuthenticated;
-        _isAdmin = user.IsInRole("Admin");
 
-        // if (_isAuthenticated)
-        //     await _roleHandler.CreateUserRolesAsync(user.Identity.Name, "Admin", _serviceProvider);
+        UserName = user.Identity.Name;
+
+        bool isAuthenticated = user.Identity.IsAuthenticated;
+        _isAdmin = user.IsInRole("Admin");
+    }
+
+    private void btnSubmitCpr_clicked()
+    {
+        string cprHashed = _hashingHandler.BCryptHashing(CprNrUserInput);
+
+        var matchedUser = _toDoContext.Cprs.FirstOrDefault(x => x.User == UserName);
+        if (matchedUser == null)
+        {
+            var cpr = new Cpr
+                {
+                    User = UserName,
+                    CprNr = cprHashed
+                };
+            _toDoContext.Cprs.Add(cpr);
+            _toDoContext.SaveChanges();
+
+            CprFromDB = _toDoContext.Cprs.FirstOrDefault(x => x.User == UserName)?.CprNr;
+        }
+        else
+        {
+            bool hashedValueMatch = _hashingHandler.BCryptVerifyHashing(CprNrUserInput, matchedUser.CprNr);
+            if (hashedValueMatch)
+            {
+                TodoListObj = _toDoContext.TodoLists.Where(x => x.UserId == matchedUser.Id).ToList();
+                CprFromDB = _toDoContext.Cprs.FirstOrDefault(x => x.User == UserName)?.CprNr;
+                CprMessage = null;
+            }
+            else
+            {
+                CprMessage = "Cpr-nr er forkert!";
+            }
+        }
+    }
+
+    private void btnSubmitTodoItem_clicked()
+    {
+        var logInUserId = _toDoContext.Cprs.FirstOrDefault(x => x.User == UserName).Id;
+
+        var todo = new TodoList
+            {
+                UserId = logInUserId,
+                Item = _asymetriskEncryptionHandler.EncryptAsymetrisk(ToDoItem)
+            };
+        _toDoContext.TodoLists.Add(todo);
+        _toDoContext.SaveChanges();
+
+        TodoListObj = _toDoContext.TodoLists.Where(x => x.UserId == logInUserId).ToList();
+    }
+
+    private void ClearItems()
+    {
+        if (_isAdmin)
+        {
+            var loginUserId = _toDoContext.Cprs.FirstOrDefault(x => x.User == UserName).Id;
+
+            var items = _toDoContext.TodoLists.Where(a => a.UserId == loginUserId).ToList();
+            foreach (var item in items)
+                _toDoContext.TodoLists.Remove(item);
+            _toDoContext.SaveChanges();
+
+            TodoListObj = _toDoContext.TodoLists.Where(x => x.UserId == loginUserId).ToList();
+        }
     }
 }
